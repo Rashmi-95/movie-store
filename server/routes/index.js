@@ -1,6 +1,7 @@
 const express = require('express')
 const router = express.Router()
 const Movie = require('../models/movie')
+const axios = require('axios')
 
 router.get('/', function (req, res, next) {
   res.send('Movie Store!')
@@ -9,25 +10,24 @@ router.get('/', function (req, res, next) {
 router.get('/movie/:movieName', findMovieByName)
 router.post('/populate', populateDatabase)
 
+const getJson = (url) => axios.get(url)
+
 function findMovieByName(req, res) {
   Movie.getMovieDetails(req.params.movieName)
     .then(function (movie) {
-      console.log(movie)
-      if(movie.length === 0) {
+      if (movie.length === 0) {
         res.send(`movie name doesnt exist`)
         return 0
       }
       const movieDetails = {}
       movieDetails.movieName = movie[0].movie_name
       movieDetails.releaseDate = movie[0].release_date
-      console.log(movieDetails)
       Movie.getActorDetails(req.params.movieName)
         .then(function (actor) {
           const actorArray = []
           actor.forEach(function (arrayItem) {
             actorArray.push(arrayItem.actor_name)
           })
-          console.log(actorArray)
           movieDetails.actors = actorArray
           movieDetails.studio = movie[0].studio
           res.json(movieDetails)
@@ -37,7 +37,6 @@ function findMovieByName(req, res) {
         })
     })
     .catch(function (err) {
-      console.log(err)
       res.json({ 'ERROR': err })
     })
 }
@@ -48,22 +47,41 @@ function populateDatabase(req, res) {
     dreamworks: req.body.dreamworksProvider,
     actors: req.body.actors
   }
-  console.log(newUrl)
   if (newUrls.paramount === undefined) {
-    return '/paramount url doesnt contain details'
+    res.send('/paramount url doesnt contain details')
+    return 0
   }
   if (newUrls.dreamworks === undefined) {
-    return '/dreamworks url doesnt contain details'
+    res.send('/dreamworks url doesnt contain details')
+    return 0
   }
   if (newUrls.actors === undefined) {
-    return '/actors url doesnt contain details'
+    res.send('/actors url doesnt contain details')
+    return 0
   }
-  Movie.populate(newUrls)
-    .then(function (data) {
-      res.json(data)
+
+  getJson(newUrls.paramount, 'paramount')
+    .then(function (response) {
+      Movie.populateMovie(response.data, 'paramount')
     })
-    .catch(function (err) {
-      res.json({ 'ERROR': err })
+    .catch(function (response) {
+      res.send('no data')
+    })
+
+  getJson(newUrls.dreamworks)
+    .then(function (response) {
+      Movie.populateMovie(response.data, 'dreamworks')
+    })
+    .catch(function (response) {
+      res.send(response.data)
+    })
+
+  getJson(newUrls.actors)
+    .then(function (response) {
+      Movie.populateActor(response.data)
+    })
+    .catch(function (response) {
+      res.send(response.data)
     })
 }
 
