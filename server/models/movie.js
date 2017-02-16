@@ -1,7 +1,7 @@
 const dbConnection = require('../dbConfig.js')
 
 function getMovieDetails (movieName) {
-  const query = `select movie_name, to_char(release_date,'Mon-DD-YYYY'), studio from movie where movie_name =:movieName;`
+  const query = `select movie_name, to_char(release_date,'Mon-DD-YYYY') as release_date, studio from movie where movie_name =:movieName;`
   return dbConnection.query(query,
     {
       replacements: {movieName},
